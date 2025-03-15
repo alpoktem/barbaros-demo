@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barbaros Voice Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f172a;
+      color: #4ade80;
+      margin: 0;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+    }
+    
+    .panel {
+      background-color: #1f2937;
+      border: 1px solid #22c55e;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    
+    #startButton {
+      display: block;
+      margin: 20px auto;
+      padding: 12px 24px;
+      background-color: #1f2937;
+      color: #4ade80;
+      border: 2px solid #22c55e;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    #startButton.listening {
+      background-color: #22c55e;
+      color: #1f2937;
+    }
+    
+    .status {
+      display: flex;
+      gap: 20px;
+    }
+    
+    .status-box {
+      flex: 1;
+      padding: 12px;
+      background-color: #1f2937;
+      border: 1px solid #22c55e;
+      border-radius: 4px;
+    }
+    
+    .status-box h3 {
+      margin-top: 0;
+      border-bottom: 1px solid #22c55e;
+      padding-bottom: 5px;
+    }
+    
+    .log {
+      height: 200px;
+      overflow-y: auto;
+      background-color: #0f172a;
+      border: 1px solid #22c55e;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 20px;
+      font-family: monospace;
+    }
+    
+    .log-entry {
+      margin-bottom: 5px;
+      border-bottom: 1px dashed rgba(34, 197, 94, 0.3);
+      padding-bottom: 5px;
+    }
+    
+    .recording-indicator {
+      color: #ef4444;
+      text-align: center;
+      font-weight: bold;
+      display: none;
+    }
+    
+    .recording-indicator.active {
+      display: block;
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 0.7; }
+      50% { opacity: 1; }
+      100% { opacity: 0.7; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Barbaros Voice Test</h1>
+    
+    <div class="panel">
+      <button id="startButton">Start Listening</button>
+      <div id="recordingIndicator" class="recording-indicator">Recording...</div>
+    </div>
+    
+    <div class="status">
+      <div class="status-box">
+        <h3>Wake Word</h3>
+        <div id="wakeWordStatus">Not detected</div>
+      </div>
+      
+      <div class="status-box">
+        <h3>Transcription</h3>
+        <div id="transcriptionStatus">Say something after wake word</div>
+      </div>
+      
+      <div class="status-box">
+        <h3>Command</h3>
+        <div id="commandStatus">No command detected</div>
+      </div>
+    </div>
+    
+    <div class="panel">
+      <h3>Command Log</h3>
+      <div id="commandLog" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    // DOM elements
+    const startButton = document.getElementById('startButton');
+    const recordingIndicator = document.getElementById('recordingIndicator');
+    const wakeWordStatus = document.getElementById('wakeWordStatus');
+    const transcriptionStatus = document.getElementById('transcriptionStatus');
+    const commandStatus = document.getElementById('commandStatus');
+    const commandLog = document.getElementById('commandLog');
+    
+    // Global variables
+    let ws;
+    let isListening = false;
+    let audioContext;
+    let audioStream;
+    let recorder;
+    
+    // Initialize WebSocket
+    function initWebSocket() {
+      ws = new WebSocket('ws://localhost:9000/mic');
+      
+      ws.onopen = function() {
+        console.log('Connected to voice server');
+        if (isListening && audioContext) {
+          // Send sample rate
+          ws.send(audioContext.sampleRate.toString());
+        }
+      };
+      
+      ws.onclose = function() {
+        console.log('Disconnected from voice server');
+        // Try to reconnect after a delay
+        setTimeout(initWebSocket, 3000);
+      };
+      
+      ws.onerror = function(error) {
+        console.error('WebSocket error:', error);
+      };
+      
+      ws.onmessage = function(event) {
+        try {
+          const message = JSON.parse(event.data);
+          
+          // Process different message types
+          switch(message.type) {
+            case 'models':
+              console.log('Available models:', message.data);
+              break;
+              
+            case 'activations':
+              handleWakeWordDetection(message.data);
+              break;
+              
+            case 'transcription':
+              handleTranscription(message.data);
+              break;
+              
+            case 'intent':
+              handleIntent(message.data);
+              break;
+              
+            default:
+              console.log('Received unknown message type:', message);
+          }
+        } catch (error) {
+          console.error('Error processing message:', error);
+        }
+      };
+    }
+    
+    // Handle wake word detection
+    function handleWakeWordDetection(activations) {
+      wakeWordStatus.textContent = `Detected: ${activations.join(', ')}`;
+      recordingIndicator.textContent = "Recording... 3";
+      recordingIndicator.classList.add('active');
+      
+      // Start countdown timer (3 seconds)
+      startCountdown(3);
+      
+      // Log the wake word detection
+      addLogEntry(`Wake word detected: ${activations.join(', ')}`);
+    }
+    
+    // Countdown timer function
+    function startCountdown(seconds) {
+      const interval = setInterval(() => {
+        seconds--;
+        if (seconds > 0) {
+          recordingIndicator.textContent = `Recording... ${seconds}`;
+        } else {
+          clearInterval(interval);
+          recordingIndicator.textContent = "Recognizing speech...";
+        }
+      }, 1000);
+    }
+    
+    // Handle transcription
+    function handleTranscription(text) {
+      transcriptionStatus.textContent = text;
+      recordingIndicator.classList.remove('active');
+      
+      // Log the transcription
+      addLogEntry(`Transcription: ${text}`);
+    }
+    
+    // Handle intent recognition
+    function handleIntent(intent) {
+      let commandText = 'Unknown command';
+      
+      if (intent.command && intent.command !== 'unknown') {
+        if (intent.value !== undefined) {
+          commandText = `${formatCommand(intent.command)} (${intent.value})`;
+        } else {
+          commandText = formatCommand(intent.command);
+        }
+      }
+      
+      commandStatus.textContent = commandText;
+      
+      // Log the intent
+      addLogEntry(`Command: ${commandText}`);
+    }
+    
+    // Format command for display
+    function formatCommand(command) {
+      return command
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    
+    // Add entry to command log
+    function addLogEntry(text) {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+      
+      commandLog.insertBefore(entry, commandLog.firstChild);
+      
+      // Limit log entries
+      while (commandLog.children.length > 50) {
+        commandLog.removeChild(commandLog.lastChild);
+      }
+    }
+    
+    // Initialize audio capture
+    function initAudioCapture() {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function(stream) {
+          audioStream = stream;
+          
+          // Create audio context
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          audioContext = new AudioContext();
+          
+          // Get sample rate
+          const sampleRate = audioContext.sampleRate;
+          console.log('Sample rate:', sampleRate);
+          
+          // Send sample rate to server
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(sampleRate.toString());
+          }
+          
+          // Create script processor
+          const bufferSize = 4096;
+          recorder = audioContext.createScriptProcessor(bufferSize, 1, 1);
+          
+          // Create media stream source
+          const source = audioContext.createMediaStreamSource(stream);
+          
+          // Set up audio processing
+          recorder.onaudioprocess = function(event) {
+            if (!isListening) return;
+            
+            const samples = event.inputBuffer.getChannelData(0);
+            const pcm16Samples = Int16Array.from(samples.map(sample => {
+              let val = Math.floor(32767 * sample);
+              return Math.min(32767, Math.max(-32768, val));
+            }));
+            
+            // Send audio data to server
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(pcm16Samples.buffer);
+            }
+          };
+          
+          // Connect the nodes
+          source.connect(recorder);
+          recorder.connect(audioContext.destination);
+          
+          console.log('Audio capture initialized');
+        })
+        .catch(function(error) {
+          console.error('Error initializing audio capture:', error);
+          addLogEntry(`Error: ${error.message}`);
+        });
+    }
+    
+    // Toggle listening state
+    function toggleListening() {
+      if (!isListening) {
+        // Start listening
+        isListening = true;
+        startButton.classList.add('listening');
+        startButton.textContent = 'Stop Listening';
+        
+        // Initialize audio capture if needed
+        if (!audioContext) {
+          initAudioCapture();
+        }
+        
+        // Ensure WebSocket is connected
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          initWebSocket();
+        }
+        
+        addLogEntry('Started listening');
+      } else {
+        // Stop listening
+        isListening = false;
+        startButton.classList.remove('listening');
+        startButton.textContent = 'Start Listening';
+        recordingIndicator.classList.remove('active');
+        
+        addLogEntry('Stopped listening');
+      }
+    }
+    
+    // Set up event listeners
+    startButton.addEventListener('click', toggleListening);
+    
+    // Initialize WebSocket connection
+    initWebSocket();
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+aiohttp
+openwakeword
+resampy
+openai 
+numpy
+wave
+onnxruntime
