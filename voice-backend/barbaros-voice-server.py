@@ -11,6 +11,7 @@ import wave
 import os
 import logging
 import asyncio
+import time
 from openai import OpenAI
 
 # Set up logging
@@ -22,7 +23,7 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Buffer for storing audio after wake word detection
 class AudioBuffer:
-    def __init__(self, sample_rate=16000, max_recording_seconds=3):  # Default to 3 seconds now
+    def __init__(self, sample_rate=16000, max_recording_seconds=4):  
         self.sample_rate = sample_rate
         self.data = []
         self.is_recording = False
@@ -60,17 +61,19 @@ async def recognize_intent(text):
 You are an assistant that interprets boat navigation commands into structured data.
 Parse this command for boat navigation: "{text}"
 Commands should be categorized as one of:
-- turn_starboard: Turn right X degrees
-- turn_port: Turn left X degrees
-- speed_up: Increase speed by X knots
-- slow_down: Decrease speed by X knots
+- turn_starboard(valued): Turn right <value> degrees
+- turn_port(valued): Turn left <value> degrees
+- speed_up(valued): Increase speed by <value> knots
+- slow_down(valued): Decrease speed by <value> knots
 - start_engine: Start the boat engine
 - stop_engine: Stop the boat engine
 - drop_anchor: Lower the anchor
 - raise_anchor: Raise the anchor
 
 For commands involving degrees or knots, extract the numeric value.
-Return a JSON object with "command" and "value" (as a number). If no value was specified, place 1 as default.
+Return a JSON object with "command" and optionally "value" (as a number). 
+If no value was specified for commands that take value, place 1 as default.
+The command can only be one of the ones listed in this prompt or "unknown".
 If no valid command is detected, return {{"command": "unknown"}}
 """
     try:
@@ -137,6 +140,11 @@ async def mic_websocket_handler(request):
     # Get the audio buffer ready
     audio_buffer = AudioBuffer()
     sample_rate = 16000  # Default sample rate
+    
+    # Prepare threshold dict for all models
+    threshold_dict = {}
+    for model_name in request.app['oww_model'].models.keys():
+        threshold_dict[model_name] = 0.5  # Set 0.5 for all models
     
     # Send loaded models
     await ws.send_str(json.dumps({"type": "models", "data": list(request.app['oww_model'].models.keys())}))
@@ -237,12 +245,20 @@ async def mic_websocket_handler(request):
                     # Check for wake word - but only if we're not in cooldown period
                     current_time = asyncio.get_event_loop().time()
                     if current_time > audio_buffer.cooldown_until:
-                        predictions = request.app['oww_model'].predict(data)
+                        # Use debounce_time parameter for openwakeword to prevent multiple activations
+                        # This will prevent the model from activating again for 10 seconds after activation
+                        # Need to provide threshold dict when using debounce_time
+                        predictions = request.app['oww_model'].predict(
+                            data, 
+                            debounce_time=5.0,
+                            threshold=threshold_dict
+                        )
                         
                         activations = []
                         for key in predictions:
                             if predictions[key] >= 0.5:  # Threshold for activation
                                 activations.append(key)
+                                logger.info(f"Wake word detected: {key} with score {predictions[key]}")
                         
                         if activations:
                             # Send activation to mic client

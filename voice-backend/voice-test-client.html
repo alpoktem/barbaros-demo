@@ -134,6 +134,10 @@
     </div>
   </div>
 
+  <!-- Simple audio elements -->
+  <audio id="wakeWordSound" src="data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAADpAFgBpQIPA64DTAWdBv0HewkhCndKSkRAPTg2LCknJCAgHRkaGBYWFBMTERAPDw0NDAsLCgoKCQkICAcHBwYGBgYFBQUFBAQEBAQDAwMDAwMDAwMCAgICAgICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" preload="auto"></audio>
+  <audio id="intentSound" src="data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAACFAFgAhACpAPcAewLpAYIABwCb/3X+gf+6AG8CRwX3BVsG8gbmBvYFDQZwBZgEBAT1Ag0CnwFvAGn/kf6P/t/+1P4XAK0AiQFHAp0CvQIPA8QCLQKfAan+O/6V/z3+dv4P/0QAWQFxA8cE6AM1A30CWQGkAM7/lP6o/sr+3f4tAEABrQJ+A3cE8gS4BAoEngOoArEBcADz/5X/9v6v/qT+Kv8X/4UA0wEXA7kE6QW1BgoIuQjNCM0IiQipBREF1QMDAu3/Uf6x/W/8nfsD+6n6uPpp+pP6F/uL++H7EvxO/L78mvwK/FT7ifrM+a/5HPq0+ip8zX14fvB/noGQg4yFaYcHibKK0IuwjAKNOI3MjCyMO4s=" preload="auto"></audio>
+
   <script>
     // DOM elements
     const startButton = document.getElementById('startButton');
@@ -142,6 +146,8 @@
     const transcriptionStatus = document.getElementById('transcriptionStatus');
     const commandStatus = document.getElementById('commandStatus');
     const commandLog = document.getElementById('commandLog');
+    const wakeWordSound = document.getElementById('wakeWordSound');
+    const intentSound = document.getElementById('intentSound');
     
     // Global variables
     let ws;
@@ -206,11 +212,20 @@
     // Handle wake word detection
     function handleWakeWordDetection(activations) {
       wakeWordStatus.textContent = `Detected: ${activations.join(', ')}`;
-      recordingIndicator.textContent = "Recording... 3";
+      recordingIndicator.textContent = "Recording... 4";
       recordingIndicator.classList.add('active');
       
-      // Start countdown timer (3 seconds)
-      startCountdown(3);
+      // Play wake word sound
+      // try {
+      //   wakeWordSound.currentTime = 0;
+      //   wakeWordSound.play();
+      //   console.log("Playing wake word sound");
+      // } catch (err) {
+      //   console.error("Error playing wake word sound:", err);
+      // }
+      
+      // Start countdown timer (4 seconds)
+      startCountdown(4);
       
       // Log the wake word detection
       addLogEntry(`Wake word detected: ${activations.join(', ')}`);
@@ -248,6 +263,15 @@
         } else {
           commandText = formatCommand(intent.command);
         }
+        
+        // Play intent sound for valid commands
+        // try {
+        //   intentSound.currentTime = 0;
+        //   intentSound.play();
+        //   console.log("Playing intent sound");
+        // } catch (err) {
+        //   console.error("Error playing intent sound:", err);
+        // }
       }
       
       commandStatus.textContent = commandText;
