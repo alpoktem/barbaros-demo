@@ -1,0 +1,237 @@
+/* styles.css */
+/* Global styles for the boat navigation system */
+:root {
+  --bg-dark: #0f172a;
+  --bg-panel: #1f2937;
+  --bg-visualization: #1e3a8a;
+  --text-primary: #4ade80;
+  --text-secondary: #86efac;
+  --text-accent: #facc15;
+  --text-error: #ef4444;
+  --border-color: #22c55e;
+  --panel-spacing: 0.5rem;
+  --panel-border-radius: 0.5rem;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 0.5rem;
+  overflow: hidden;
+}
+
+.app-header {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.app-header h1 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.visualization-panel {
+  flex: 3;
+  margin-right: 0.5rem;
+  background-color: var(--bg-visualization);
+  border-radius: var(--panel-border-radius);
+  overflow: hidden;
+}
+
+.dashboard-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-scrollable {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dashboard-item {
+  background-color: var(--bg-panel);
+  border-radius: var(--panel-border-radius);
+  padding: var(--panel-spacing);
+  margin-bottom: var(--panel-spacing);
+}
+
+.dashboard-item h2 {
+  font-size: 1.125rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.25rem;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.dashboard-grid .label {
+  text-align: right;
+}
+
+.dashboard-grid .value {
+  text-align: left;
+}
+
+.command-panel {
+  display: flex;
+  background-color: var(--bg-panel);
+  border-radius: var(--panel-border-radius);
+  padding: var(--panel-spacing);
+  margin-top: var(--panel-spacing);
+}
+
+.command-section {
+  flex: 1;
+  padding: 0.25rem;
+}
+
+.command-section h2 {
+  font-size: 1.125rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.25rem;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.command-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+}
+
+.command-grid .label {
+  text-align: right;
+}
+
+.engine-on {
+  color: var(--text-primary);
+}
+
+.engine-off {
+  color: var(--text-error);
+}
+
+.waiting-input {
+  color: var(--text-error);
+}
+
+.text-accent {
+  color: var(--text-accent);
+}
+
+.svg-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.control-title {
+  width: 100%;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  font-weight: bold;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.25rem;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.control-item {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.25rem;
+  text-align: right;
+}
+
+.control-action {
+  margin-left: 0.5rem;
+  text-align: left;
+  flex: 1;
+}
+
+/* Add these to your styles.css file */
+
+/* Command history styling */
+.command-current {
+  margin-bottom: 0.5rem;
+  min-height: 1.2rem; 
+}
+
+.command-history {
+  margin-top: 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px dotted rgba(34, 197, 94, 0.3);
+}
+
+.history-title {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+  opacity: 0.8;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.history-item {
+  color: var(--text-accent);
+  font-family: monospace;
+  padding-left: 0.75rem;
+  position: relative;
+}
+
+.history-item::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  opacity: 0.7;
+}
+
+/* Ensure command section has proper spacing */
+.command-section {
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make sure the waiting input stands out */
+.waiting-input {
+  color: var(--text-error);
+  animation: pulse 1.5s infinite;
+  margin-left: 0.5rem;
+  display: inline;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
