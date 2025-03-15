@@ -4,109 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Barbaros Voice Test</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #0f172a;
-      color: #4ade80;
-      margin: 0;
-      padding: 20px;
-    }
-    
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    
-    h1 {
-      text-align: center;
-    }
-    
-    .panel {
-      background-color: #1f2937;
-      border: 1px solid #22c55e;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 20px;
-    }
-    
-    #startButton {
-      display: block;
-      margin: 20px auto;
-      padding: 12px 24px;
-      background-color: #1f2937;
-      color: #4ade80;
-      border: 2px solid #22c55e;
-      border-radius: 4px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    
-    #startButton.listening {
-      background-color: #22c55e;
-      color: #1f2937;
-    }
-    
-    .status {
-      display: flex;
-      gap: 20px;
-    }
-    
-    .status-box {
-      flex: 1;
-      padding: 12px;
-      background-color: #1f2937;
-      border: 1px solid #22c55e;
-      border-radius: 4px;
-    }
-    
-    .status-box h3 {
-      margin-top: 0;
-      border-bottom: 1px solid #22c55e;
-      padding-bottom: 5px;
-    }
-    
-    .log {
-      height: 200px;
-      overflow-y: auto;
-      background-color: #0f172a;
-      border: 1px solid #22c55e;
-      border-radius: 4px;
-      padding: 10px;
-      margin-top: 20px;
-      font-family: monospace;
-    }
-    
-    .log-entry {
-      margin-bottom: 5px;
-      border-bottom: 1px dashed rgba(34, 197, 94, 0.3);
-      padding-bottom: 5px;
-    }
-    
-    .recording-indicator {
-      color: #ef4444;
-      text-align: center;
-      font-weight: bold;
-      display: none;
-    }
-    
-    .recording-indicator.active {
-      display: block;
-      animation: pulse 1.5s infinite;
-    }
-    
-    @keyframes pulse {
-      0% { opacity: 0.7; }
-      50% { opacity: 1; }
-      100% { opacity: 0.7; }
-    }
-  </style>
+  <link rel="stylesheet" href="voice-test-client.css">
 </head>
 <body>
   <div class="container">
     <h1>Barbaros Voice Test</h1>
     
     <div class="panel">
+      <div id="connectionStatus" class="connection-status">Connecting to voice server...</div>
       <button id="startButton">Start Listening</button>
       <div id="recordingIndicator" class="recording-indicator">Recording...</div>
     </div>
@@ -136,7 +41,7 @@
 
   <!-- Simple audio elements -->
   <audio id="wakeWordSound" src="data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAADpAFgBpQIPA64DTAWdBv0HewkhCndKSkRAPTg2LCknJCAgHRkaGBYWFBMTERAPDw0NDAsLCgoKCQkICAcHBwYGBgYFBQUFBAQEBAQDAwMDAwMDAwMCAgICAgICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" preload="auto"></audio>
-  <audio id="intentSound" src="data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAACFAFgAhACpAPcAewLpAYIABwCb/3X+gf+6AG8CRwX3BVsG8gbmBvYFDQZwBZgEBAT1Ag0CnwFvAGn/kf6P/t/+1P4XAK0AiQFHAp0CvQIPA8QCLQKfAan+O/6V/z3+dv4P/0QAWQFxA8cE6AM1A30CWQGkAM7/lP6o/sr+3f4tAEABrQJ+A3cE8gS4BAoEngOoArEBcADz/5X/9v6v/qT+Kv8X/4UA0wEXA7kE6QW1BgoIuQjNCM0IiQipBREF1QMDAu3/Uf6x/W/8nfsD+6n6uPpp+pP6F/uL++H7EvxO/L78mvwK/FT7ifrM+a/5HPq0+ip8zX14fvB/noGQg4yFaYcHibKK0IuwjAKNOI3MjCyMO4s=" preload="auto"></audio>
+  <audio id="intentSound" src="data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAACFAFgAhACpAPcAewLpAYIABwCb/3X+gf+6AG8CRwX3BVsG8gbmBvYFDQZwBZgEBAT1Ag0CnwFvAGn/kf6P/t/+1P4XAK0AiQFHAp0CvQIPA8QCLQKfAan+O/6V/z3+dv4P/0QAWQFxA8cE6AM1A30CWQGkAM7/lP6o/sr+3f4tAEABrQJ+A3cE8gS4BAoEngOoArEBcADz/5X/9v6v/qT+Kv8X/4UA0wEXA7kE6QW1BgoIuQjNCM0IiQipBREF1QMDAu3/Uf6x/W/8nvsD+6n6uPpp+pP6F/uL++H7EvxO/L78mvwK/FT7ifrM+a/5HPq0+ip8zX14fvB/noGQg4yFaYcHibKK0IuwjAKNOI3MjCyMO4s=" preload="auto"></audio>
 
   <script>
     // DOM elements
@@ -148,6 +53,7 @@
     const commandLog = document.getElementById('commandLog');
     const wakeWordSound = document.getElementById('wakeWordSound');
     const intentSound = document.getElementById('intentSound');
+    const connectionStatus = document.getElementById('connectionStatus');
     
     // Global variables
     let ws;
@@ -158,11 +64,22 @@
     
     // Initialize WebSocket
     function initWebSocket() {
+      connectionStatus.textContent = "Connecting to voice server...";
+      connectionStatus.className = "connection-status";
+      
       ws = new WebSocket('ws://localhost:9000/mic');
       
       ws.onopen = function() {
         console.log('Connected to voice server');
-        if (isListening && audioContext) {
+        connectionStatus.textContent = "Connected to voice server - Auto-starting...";
+        connectionStatus.className = "connection-status connected";
+        
+        // Auto-start listening when connected
+        if (!isListening) {
+          toggleListening();
+        }
+        
+        if (audioContext) {
           // Send sample rate
           ws.send(audioContext.sampleRate.toString());
         }
@@ -170,12 +87,25 @@
       
       ws.onclose = function() {
         console.log('Disconnected from voice server');
+        connectionStatus.textContent = "Disconnected from voice server - Reconnecting...";
+        connectionStatus.className = "connection-status error";
+        
+        // Update UI state if we were listening
+        if (isListening) {
+          isListening = false;
+          startButton.classList.remove('listening');
+          startButton.textContent = 'Start Listening';
+          recordingIndicator.classList.remove('active');
+        }
+        
         // Try to reconnect after a delay
         setTimeout(initWebSocket, 3000);
       };
       
       ws.onerror = function(error) {
         console.error('WebSocket error:', error);
+        connectionStatus.textContent = "Connection error - check if server is running";
+        connectionStatus.className = "connection-status error";
       };
       
       ws.onmessage = function(event) {
@@ -214,15 +144,6 @@
       wakeWordStatus.textContent = `Detected: ${activations.join(', ')}`;
       recordingIndicator.textContent = "Recording... 4";
       recordingIndicator.classList.add('active');
-      
-      // Play wake word sound
-      // try {
-      //   wakeWordSound.currentTime = 0;
-      //   wakeWordSound.play();
-      //   console.log("Playing wake word sound");
-      // } catch (err) {
-      //   console.error("Error playing wake word sound:", err);
-      // }
       
       // Start countdown timer (4 seconds)
       startCountdown(4);
@@ -263,15 +184,6 @@
         } else {
           commandText = formatCommand(intent.command);
         }
-        
-        // Play intent sound for valid commands
-        // try {
-        //   intentSound.currentTime = 0;
-        //   intentSound.play();
-        //   console.log("Playing intent sound");
-        // } catch (err) {
-        //   console.error("Error playing intent sound:", err);
-        // }
       }
       
       commandStatus.textContent = commandText;
@@ -372,7 +284,13 @@
         // Ensure WebSocket is connected
         if (!ws || ws.readyState !== WebSocket.OPEN) {
           initWebSocket();
+        } else {
+          // Send listening status
+          ws.send("start_listening");
         }
+        
+        connectionStatus.textContent = "Listening for wake word...";
+        connectionStatus.className = "connection-status connected";
         
         addLogEntry('Started listening');
       } else {
@@ -381,6 +299,14 @@
         startButton.classList.remove('listening');
         startButton.textContent = 'Start Listening';
         recordingIndicator.classList.remove('active');
+        
+        // Send listening status
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send("stop_listening");
+        }
+        
+        connectionStatus.textContent = "Listening paused";
+        connectionStatus.className = "connection-status";
         
         addLogEntry('Stopped listening');
       }

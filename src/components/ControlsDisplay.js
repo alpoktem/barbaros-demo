@@ -1,7 +1,7 @@
 // components/ControlsDisplay.js
 import React from 'react';
 
-const ControlsDisplay = () => {
+const ControlsDisplay = ({ showVoiceControls = false }) => {
   return (
     <div className="command-section">
       <h2 className="control-title">Controls</h2>

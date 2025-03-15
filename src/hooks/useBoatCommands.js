@@ -32,7 +32,7 @@ const useBoatCommands = () => {
         
         // 1. Handle momentum and speed changes
         // Boats have significant momentum, especially larger vessels
-        if (prev.engineStatus === 'ON' && prev.speed < prev.momentum) {
+        if (prev.engineStatus === 'ON' && prev.speed < prev.momentum && prev.momentum > 0) {
           // Gradual acceleration (slower than deceleration)
           newState.speed = Math.min(20, prev.speed + 0.05);
           newState.momentum = Math.min(20, prev.momentum + 0.03);
@@ -42,8 +42,9 @@ const useBoatCommands = () => {
           const decelRate = 0.05 + (prev.speed * 0.01);
           newState.speed = Math.max(0, prev.speed - decelRate);
           newState.momentum = Math.max(0, prev.momentum - (decelRate * 0.7));
-        } else if (prev.engineStatus === 'ON') {
+        } else if (prev.engineStatus === 'ON' && prev.speed > 0) {
           // Maintain momentum slightly above speed for realistic acceleration feel
+          // ONLY if the boat is already moving
           newState.momentum = Math.min(20, prev.speed + 0.5);
         }
 
@@ -302,7 +303,16 @@ const useBoatCommands = () => {
     });
   };
 
-  return { boatState, lastCommand, waitingForNumber };
+  return { 
+    boatState, 
+    setBoatState,  // Expose setBoatState for direct manipulation
+    lastCommand, 
+    waitingForNumber, 
+    executeCommand, // Expose executeCommand for reuse
+    setLastCommand, // Expose setLastCommand for direct updates
+    toggleEngine,   // Expose toggleEngine for direct calls
+    toggleAnchor    // Expose toggleAnchor for direct calls
+  };
 };
 
 export default useBoatCommands;

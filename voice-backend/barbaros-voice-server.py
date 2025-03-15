@@ -127,6 +127,42 @@ async def transcribe_audio(audio_data, sample_rate=16000):
         logger.error(f"Error in transcription: {e}")
         return None
 
+# Broadcast wake word detection to all connected boat apps
+async def broadcast_wake_word(app, activations):
+    if hasattr(app, 'boat_websockets') and app.boat_websockets:
+        message = json.dumps({"type": "wake_word", "data": activations})
+        tasks = [ws.send_str(message) for ws in app.boat_websockets if not ws.closed]
+        if tasks:
+            logger.info(f"Broadcasting wake word detection to {len(tasks)} boat app(s)")
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+# Broadcast commands to all connected boat apps
+async def broadcast_command(app, command):
+    if hasattr(app, 'boat_websockets') and app.boat_websockets:
+        message = json.dumps({"type": "command", "data": command})
+        tasks = [ws.send_str(message) for ws in app.boat_websockets if not ws.closed]
+        if tasks:
+            logger.info(f"Broadcasting command to {len(tasks)} boat app(s): {command}")
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+# Broadcast listening status to all connected boat apps
+async def broadcast_listening_status(app, is_listening):
+    if hasattr(app, 'boat_websockets') and app.boat_websockets:
+        message = json.dumps({"type": "listening_status", "data": is_listening})
+        tasks = [ws.send_str(message) for ws in app.boat_websockets if not ws.closed]
+        if tasks:
+            logger.info(f"Broadcasting listening status to {len(tasks)} boat app(s): {'active' if is_listening else 'inactive'}")
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+# Broadcast any message to all connected boat apps
+async def broadcast_to_boat_apps(app, msg_type, msg_data):
+    if hasattr(app, 'boat_websockets') and app.boat_websockets:
+        message = json.dumps({"type": msg_type, "data": msg_data})
+        tasks = [ws.send_str(message) for ws in app.boat_websockets if not ws.closed]
+        if tasks:
+            logger.info(f"Broadcasting {msg_type} to {len(tasks)} boat app(s)")
+            await asyncio.gather(*tasks, return_exceptions=True)
+
 # Define websocket handler for microphone data
 async def mic_websocket_handler(request):
     ws = web.WebSocketResponse()
@@ -172,6 +208,9 @@ async def mic_websocket_handler(request):
                                         "data": transcription
                                     }))
                                     
+                                    # Broadcast transcription to boat apps
+                                    await broadcast_to_boat_apps(request.app, "transcription", transcription)
+                                    
                                     # Recognize intent
                                     intent = await recognize_intent(transcription)
                                     
@@ -193,6 +232,12 @@ async def mic_websocket_handler(request):
                                     
                                     # Set cooldown period (3 seconds) to prevent immediate re-detection
                                     audio_buffer.cooldown_until = asyncio.get_event_loop().time() + 3
+                    elif data == "start_listening":
+                        logger.info("Start listening command received")
+                        await broadcast_listening_status(request.app, True)
+                    elif data == "stop_listening":
+                        logger.info("Stop listening command received")
+                        await broadcast_listening_status(request.app, False)
                 except ValueError:
                     logger.warning(f"Received unrecognized text message: {msg.data}")
             
@@ -220,6 +265,9 @@ async def mic_websocket_handler(request):
                                 "type": "transcription", 
                                 "data": transcription
                             }))
+                            
+                            # Broadcast transcription to boat apps
+                            await broadcast_to_boat_apps(request.app, "transcription", transcription)
                             
                             # Recognize intent
                             intent = await recognize_intent(transcription)
@@ -294,6 +342,10 @@ async def boat_app_websocket_handler(request):
     
     logger.info(f"Boat app connected. Total connections: {len(request.app.boat_websockets)}")
     
+    # Notify the boat app that listening is active (auto-start listening)
+    await ws.send_str(json.dumps({"type": "listening_status", "data": True}))
+    logger.info(f"Sent listening active status to new boat app connection")
+    
     try:
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
@@ -310,27 +362,21 @@ async def boat_app_websocket_handler(request):
     
     return ws
 
-# Broadcast wake word detection to all connected boat apps
-async def broadcast_wake_word(app, activations):
-    if hasattr(app, 'boat_websockets') and app.boat_websockets:
-        message = json.dumps({"type": "wake_word", "data": activations})
-        tasks = [ws.send_str(message) for ws in app.boat_websockets if not ws.closed]
-        if tasks:
-            logger.info(f"Broadcasting wake word detection to {len(tasks)} boat app(s)")
-            await asyncio.gather(*tasks, return_exceptions=True)
-
-# Broadcast commands to all connected boat apps
-async def broadcast_command(app, command):
-    if hasattr(app, 'boat_websockets') and app.boat_websockets:
-        message = json.dumps({"type": "command", "data": command})
-        tasks = [ws.send_str(message) for ws in app.boat_websockets if not ws.closed]
-        if tasks:
-            logger.info(f"Broadcasting command to {len(tasks)} boat app(s): {command}")
-            await asyncio.gather(*tasks, return_exceptions=True)
-
 # Define static file handler
 async def static_file_handler(request):
-    return web.FileResponse('./voice-test-client.html')
+    path = request.path
+    
+    if path == '/':
+        return web.FileResponse('./voice-test-client.html')
+    elif path == '/voice-test-client.css':
+        return web.FileResponse('./voice-test-client.css')
+    else:
+        # For any other file, try to serve it directly
+        try:
+            return web.FileResponse(f'.{path}')
+        except:
+            # If the file doesn't exist, redirect to home
+            return web.HTTPFound('/')
 
 # Create application and setup routes
 app = web.Application()
