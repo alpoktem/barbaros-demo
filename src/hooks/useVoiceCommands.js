@@ -1,5 +1,6 @@
 // hooks/useVoiceCommands.js
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { boatCommands } from './boatPhysics';
 
 const useVoiceCommands = (boatState, setBoatState, setLastCommand) => {
   // Voice status state - inactive by default until we connect
@@ -7,6 +8,8 @@ const useVoiceCommands = (boatState, setBoatState, setLastCommand) => {
   const wsRef = useRef(null);
   
   // Function to directly modify boat state based on voice commands
+  // Important: We don't need boatState in the dependency array since we're using the functional
+  // updater pattern with setBoatState (which always gets the latest state)
   const executeVoiceCommand = useCallback((command) => {
     if (!command || command.command === 'unknown') return;
     
@@ -15,84 +18,43 @@ const useVoiceCommands = (boatState, setBoatState, setLastCommand) => {
     // Set status to executing
     setVoiceStatus('executing');
     
-    // Execute specific commands directly
+    // Execute specific commands directly using the shared boat commands logic
     switch (command.command) {
       case 'turn_port': {
         const value = command.value || 1;
         setLastCommand(`Turn Port ${value}°`);
-        
-        setBoatState(prev => {
-          // Port turns are more gradual at higher speeds
-          const maxRudderAngle = Math.max(1, 9 - (prev.speed * 0.3));
-          const safeValue = Math.min(value, maxRudderAngle);
-          
-          return {
-            ...prev,
-            targetRudderAngle: -safeValue, // Port side is negative
-            targetHeading: (prev.heading - value + 360) % 360
-          };
-        });
+        setBoatState(prev => boatCommands.turnPort(prev, value));
         break;
       }
         
       case 'turn_starboard': {
         const value = command.value || 1;
         setLastCommand(`Turn Starboard ${value}°`);
-        
-        setBoatState(prev => {
-          // Starboard turns are more gradual at higher speeds
-          const maxRudderAngle = Math.max(1, 9 - (prev.speed * 0.3));
-          const safeValue = Math.min(value, maxRudderAngle);
-          
-          return {
-            ...prev,
-            targetRudderAngle: safeValue, // Starboard side is positive
-            targetHeading: (prev.heading + value) % 360
-          };
-        });
+        setBoatState(prev => boatCommands.turnStarboard(prev, value));
         break;
       }
         
       case 'speed_up': {
         const value = command.value || 1;
         setLastCommand(`Increase Speed +${value}`);
-        
-        setBoatState(prev => {
-          const targetSpeed = Math.min(20, prev.speed + value);
-          
-          return {
-            ...prev,
-            speed: prev.engineStatus === 'ON' ? targetSpeed : 0,
-            momentum: prev.engineStatus === 'ON' ? targetSpeed + 0.5 : 0
-          };
-        });
+        setBoatState(prev => boatCommands.increaseSpeed(prev, value));
         break;
       }
         
       case 'slow_down': {
         const value = command.value || 1;
         setLastCommand(`Decrease Speed -${value}`);
-        
-        setBoatState(prev => {
-          const targetSpeed = Math.max(0, prev.speed - value);
-          
-          return {
-            ...prev,
-            speed: targetSpeed,
-            momentum: targetSpeed + 0.5
-          };
-        });
+        setBoatState(prev => boatCommands.decreaseSpeed(prev, value));
         break;
       }
         
       case 'start_engine':
         setLastCommand('Engine ON');
-        
         setBoatState(prev => {
           // Only toggle if needed
           if (prev.engineStatus === 'OFF') {
             console.log('Starting engine');
-            return { ...prev, engineStatus: 'ON' };
+            return boatCommands.toggleEngine(prev);
           }
           return prev;
         });
@@ -100,12 +62,11 @@ const useVoiceCommands = (boatState, setBoatState, setLastCommand) => {
         
       case 'stop_engine':
         setLastCommand('Engine OFF');
-        
         setBoatState(prev => {
           // Only toggle if needed
           if (prev.engineStatus === 'ON') {
             console.log('Stopping engine');
-            return { ...prev, engineStatus: 'OFF' };
+            return boatCommands.toggleEngine(prev);
           }
           return prev;
         });
@@ -113,16 +74,10 @@ const useVoiceCommands = (boatState, setBoatState, setLastCommand) => {
         
       case 'drop_anchor':
         setLastCommand('Anchor DROPPED');
-        
         setBoatState(prev => {
           // Only toggle if needed
           if (prev.anchorStatus === 'RAISED') {
-            return {
-              ...prev,
-              anchorStatus: 'DROPPED',
-              speed: 0,
-              momentum: 0
-            };
+            return boatCommands.toggleAnchor(prev);
           }
           return prev;
         });
@@ -130,11 +85,10 @@ const useVoiceCommands = (boatState, setBoatState, setLastCommand) => {
         
       case 'raise_anchor':
         setLastCommand('Anchor RAISED');
-        
         setBoatState(prev => {
           // Only toggle if needed
           if (prev.anchorStatus === 'DROPPED') {
-            return { ...prev, anchorStatus: 'RAISED' };
+            return boatCommands.toggleAnchor(prev);
           }
           return prev;
         });
@@ -148,7 +102,7 @@ const useVoiceCommands = (boatState, setBoatState, setLastCommand) => {
     setTimeout(() => {
       setVoiceStatus('connected');
     }, 3000);
-  }, [setBoatState, setLastCommand]);
+  }, [setBoatState, setLastCommand, setVoiceStatus]); // Note: boatState is NOT in the dependency array
   
   // Connect to the voice server via WebSocket
   useEffect(() => {
@@ -286,7 +240,7 @@ const useVoiceCommands = (boatState, setBoatState, setLastCommand) => {
         clearTimeout(reconnectTimeout);
       }
     };
-  }, [executeVoiceCommand]);
+  }, [executeVoiceCommand]); // Should depend on executeVoiceCommand
   
   return { 
     voiceStatus,

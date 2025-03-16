@@ -23,7 +23,7 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Buffer for storing audio after wake word detection
 class AudioBuffer:
-    def __init__(self, sample_rate=16000, max_recording_seconds=4):  
+    def __init__(self, sample_rate=16000, max_recording_seconds=3):  
         self.sample_rate = sample_rate
         self.data = []
         self.is_recording = False

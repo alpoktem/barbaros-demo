@@ -142,11 +142,11 @@
     // Handle wake word detection
     function handleWakeWordDetection(activations) {
       wakeWordStatus.textContent = `Detected: ${activations.join(', ')}`;
-      recordingIndicator.textContent = "Recording... 4";
+      recordingIndicator.textContent = "Recording... 3";
       recordingIndicator.classList.add('active');
       
-      // Start countdown timer (4 seconds)
-      startCountdown(4);
+      // Start countdown timer (3 seconds)
+      startCountdown(3);
       
       // Log the wake word detection
       addLogEntry(`Wake word detected: ${activations.join(', ')}`);
